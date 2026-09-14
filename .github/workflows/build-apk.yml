@@ -12,6 +12,10 @@ on:
     branches: [main, master]
   workflow_dispatch: # Allows manually triggering the build from the Actions tab.
 
+# Needed so the workflow can create a GitHub Release and attach the APK to it.
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Build APK
