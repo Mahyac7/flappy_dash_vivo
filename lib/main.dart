@@ -484,13 +484,11 @@ class GameOverOverlay extends StatelessWidget {
                       icon: Icons.share,
                       color: Colors.lightBlueAccent,
                       onPressed: () {
-                        SharePlus.instance.share(
-                          ShareParams(
-                            text: 'I scored ${game.score} in Flappy '
-                                'Vappstore! My best is ${game.highScore}. '
-                                'Can you beat me? 🐦',
-                            subject: 'My Flappy Vappstore score',
-                          ),
+                        // ignore: deprecated_member_use
+                        Share.share(
+                          'I scored ${game.score} in Flappy Vappstore! '
+                          'My best is ${game.highScore}. Can you beat me? 🐦',
+                          subject: 'My Flappy Vappstore score',
                         );
                       },
                     ),
