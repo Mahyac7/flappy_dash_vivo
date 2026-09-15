@@ -46,9 +46,7 @@ and try to beat your high score!
 > repo's signing secrets are configured, so updates install over previous
 > versions without uninstalling.
 
-## 📱 Download & install the APK (no tools needed)
-
-This repo builds an installable Android `.apk` automatically using GitHub Actions.
+## 📱 Download & install the APK 
 
 1. Go to the **[Actions](../../actions)** tab of this repository.
 2. Open the most recent **"Build Android APK"** run (green ✓).
@@ -61,11 +59,6 @@ This repo builds an installable Android `.apk` automatically using GitHub Action
 > **"Run workflow"**, or create a release by pushing a tag like `v1.0.0` — the
 > APK will be attached to the GitHub Release automatically.
 
-## 🛠️ Build it yourself (optional)
-
-Requires the [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.24.5+)
-and the Android toolchain.
-
 ```bash
 # Get dependencies
 flutter pub get
@@ -76,12 +69,6 @@ flutter run
 # Build a release APK
 flutter build apk --release
 # Output: build/app/outputs/flutter-apk/app-release.apk
-```
-
-You can also play it in a browser:
-
-```bash
-flutter run -d chrome
 ```
 
 ## 🧱 Project structure
@@ -116,6 +103,5 @@ assets/
 - [Flame](https://flame-engine.org/) `1.18.0` — 2D game engine
 - [audioplayers](https://pub.dev/packages/audioplayers) — sound effects
 - [shared_preferences](https://pub.dev/packages/shared_preferences) — persistent high score
-- GitHub Actions — automatic APK builds
 
 by Indonesia V-AppStore Team
