@@ -122,4 +122,4 @@ assets/
 
 Free to use and modify for learning and fun. 
 
-Indonesia V-AppStore Team
+by Indonesia V-AppStore Team
