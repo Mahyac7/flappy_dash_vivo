@@ -44,8 +44,8 @@ class ScoreText extends TextComponent with HasGameReference<FlappyGame> {
 
   @override
   void render(Canvas canvas) {
-    // Only show the score during active play.
-    if (game.state == GameState.playing) {
+    // Show the score during ready + active play.
+    if (game.state == GameState.playing || game.state == GameState.ready) {
       super.render(canvas);
     }
   }

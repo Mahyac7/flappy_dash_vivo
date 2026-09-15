@@ -26,10 +26,15 @@ class Bird extends PositionComponent
   /// Remaining shield time in seconds (0 = no shield).
   double shieldTime = 0;
   double _shieldPulse = 0;
+  double _hoverPhase = 0;
+  double _baseY = 0;
 
   bool get hasShield => shieldTime > 0;
 
   static const double _radius = 17;
+
+  /// Visual + hitbox scale (shrinks with the mini power-up).
+  double get _scaleFactor => game.isMini ? 0.62 : 1.0;
 
   @override
   Future<void> onLoad() async {
@@ -49,7 +54,10 @@ class Bird extends PositionComponent
     _velocity = 0;
     shieldTime = 0;
     angle = 0;
+    _hoverPhase = 0;
+    scale = Vector2.all(1);
     position = Vector2(game.size.x * 0.28, game.size.y * 0.42);
+    _baseY = position.y;
   }
 
   /// Applies an upward impulse.
@@ -71,6 +79,18 @@ class Bird extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+
+    // Smoothly apply the mini power-up scale.
+    scale = Vector2.all(_scaleFactor);
+
+    // Tap-to-start: hover gently, no gravity yet.
+    if (game.state == GameState.ready) {
+      _hoverPhase += dt * 3;
+      position.y = _baseY + math.sin(_hoverPhase) * 8;
+      angle = 0;
+      return;
+    }
+
     if (game.state != GameState.playing && _alive) return;
 
     if (shieldTime > 0) {

@@ -4,18 +4,14 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../game/flappy_game.dart';
+import '../game/themes.dart';
+import '../services/game_storage.dart';
 
 /// Sky background that smoothly transitions from day to night as the player's
 /// difficulty (score) increases, with clouds by day and stars + moon by night.
+/// Palette comes from the player's selected [GameTheme].
 class Background extends PositionComponent with HasGameReference<FlappyGame> {
   Background();
-
-  // Day palette.
-  static const Color _dayTop = Color(0xFF4EC0CA);
-  static const Color _dayBottom = Color(0xFF9BE0E6);
-  // Night palette.
-  static const Color _nightTop = Color(0xFF0B1E3B);
-  static const Color _nightBottom = Color(0xFF264A73);
 
   final math.Random _rng = math.Random(42);
   late final List<Offset> _stars;
@@ -44,8 +40,9 @@ class Background extends PositionComponent with HasGameReference<FlappyGame> {
     final double night =
         game.state == GameState.menu ? 0.0 : game.difficulty;
 
-    final Color top = Color.lerp(_dayTop, _nightTop, night)!;
-    final Color bottom = Color.lerp(_dayBottom, _nightBottom, night)!;
+    final theme = GameTheme.byIndex(GameStorage.instance.theme);
+    final Color top = Color.lerp(theme.dayTop, theme.nightTop, night)!;
+    final Color bottom = Color.lerp(theme.dayBottom, theme.nightBottom, night)!;
 
     final rect = Rect.fromLTWH(0, 0, size.x, size.y);
     final skyPaint = Paint()

@@ -3,6 +3,8 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../game/flappy_game.dart';
+import '../game/themes.dart';
+import '../services/game_storage.dart';
 import 'ground.dart';
 
 /// A pair of pipes (top + bottom) with a gap the bird must fly through.
@@ -33,9 +35,12 @@ class PipePair extends PositionComponent with HasGameReference<FlappyGame> {
     final double topHeight = gapCenter - gap / 2;
     final double bottomTop = gapCenter + gap / 2;
 
+    final theme = GameTheme.byIndex(GameStorage.instance.theme);
+
     // Top pipe.
     add(_Pipe(
       isTop: true,
+      theme: theme,
       position: Vector2(0, 0),
       size: Vector2(pipeWidth, topHeight),
     ));
@@ -43,6 +48,7 @@ class PipePair extends PositionComponent with HasGameReference<FlappyGame> {
     // Bottom pipe.
     add(_Pipe(
       isTop: false,
+      theme: theme,
       position: Vector2(0, bottomTop),
       size: Vector2(pipeWidth, groundTop - bottomTop),
     ));
@@ -72,11 +78,13 @@ class PipePair extends PositionComponent with HasGameReference<FlappyGame> {
 class _Pipe extends PositionComponent {
   _Pipe({
     required this.isTop,
+    required this.theme,
     required Vector2 position,
     required Vector2 size,
   }) : super(position: position, size: size);
 
   final bool isTop;
+  final GameTheme theme;
 
   @override
   Future<void> onLoad() async {
@@ -88,9 +96,9 @@ class _Pipe extends PositionComponent {
     super.render(canvas);
     if (size.y <= 0) return;
 
-    final bodyPaint = Paint()..color = const Color(0xFF5BA31F);
-    final rimPaint = Paint()..color = const Color(0xFF3E7A14);
-    final highlightPaint = Paint()..color = const Color(0xFF7ED03A);
+    final bodyPaint = Paint()..color = theme.pipeBody;
+    final rimPaint = Paint()..color = theme.pipeRim;
+    final highlightPaint = Paint()..color = theme.pipeHighlight;
 
     // Main pipe body.
     canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), bodyPaint);

@@ -17,21 +17,30 @@ and try to beat your high score!
 
 ## ✨ Features
 
-- 🔊 **Sound effects** for flapping, scoring and crashing (with an on/off toggle).
-- 🎵 **Background music** (looping chiptune) with its own on/off toggle.
-- 🎨 **Bird skins** — pick from 6 colour schemes; your choice is saved.
-- ⚡ **Power-ups**:
+- 🪙 **Coins** — collect coins in the gaps and spend them in the shop.
+- 🎨 **Bird shop** — 6 bird skins; the first is free, the rest unlock with coins.
+- 🖼️ **Themes** — 4 swappable pipe + sky colour schemes (Classic, Sunset, Candy, Ocean).
+- ⚡ **Power-ups** (5 types):
   - 🛡️ **Shield** — absorbs one pipe hit.
-  - ⏱️ **Slow-mo** — briefly slows the world down so you can thread tight gaps.
-- 📈 **Progressive difficulty** — the game gets faster and the gaps get narrower as your score climbs.
-- 💾 **Persistent high score** — saved and survives app restarts.
-- 🏆 **Local leaderboard** — your top 5 scores with your player name.
-- 📤 **Share your score** to any app via the system share sheet.
+  - ⏱️ **Slow-mo** — slows the world down.
+  - 🧲 **Magnet** — pulls nearby coins toward you.
+  - 🔽 **Mini** — shrinks the bird so tight gaps are easier.
+  - ✖️2 **Double score** — points count double.
+- 🔥 **Combo system** — chain pipes without breaking your streak to raise a score multiplier.
+- 👆 **Tap-to-start** — the bird hovers until your first tap.
+- 🏆 **Achievements** with coin rewards + a **daily mission**.
+- 📊 **Player stats** — games, pipes, coins, best combo, total flight time.
+- 💥 **Particle & pop-up effects** — coin sparkles, crash burst, combo/power-up text.
+- 🔊 **Sound effects** + 🎵 **background music**, each with a toggle.
+- ⚙️ **Settings menu** (SFX / music / vibration) plus quick links to stats & awards.
+- 📈 **Progressive difficulty** — faster and narrower as your score climbs.
+- 💾 **Persistent** high score, coins, skins, stats and settings.
+- 🏆 **Local leaderboard** (top 5) with your player name.
+- 📤 **Share your score** via the system share sheet.
 - 🏠 **Home button** on the pause and game-over screens.
-- ⏸️ **Pause / resume** button during play.
-- 🌗 **Day → night** background that darkens as difficulty rises (with stars and a moon).
-- 🏅 **Medals** on the game-over screen: Bronze, Silver, Gold, Platinum.
-- 📳 **Haptic feedback** (vibration) on crash and power-up pickup.
+- 🌗 **Day → night** sky that darkens with difficulty.
+- 🏅 **Medals**: Bronze, Silver, Gold, Platinum.
+- 📳 **Haptic feedback** on crash and power-up pickup.
 
 > 🔑 **Signed releases:** the APK is signed with a persistent release key when the
 > repo's signing secrets are configured, so updates install over previous
@@ -79,20 +88,26 @@ flutter run -d chrome
 
 ```
 lib/
-├── main.dart                  # App entry point + all overlays (menu, HUD, pause, game over)
+├── main.dart                  # App entry + all overlays (menu, HUD, pause, game over, dialogs)
 ├── game/
-│   └── flappy_game.dart        # Core game loop, state, scoring, difficulty, medals
+│   ├── flappy_game.dart        # Core loop: state, scoring, combo, power-ups, difficulty
+│   ├── bird_skins.dart         # Bird colour schemes
+│   └── themes.dart             # Pipe + sky themes
 ├── components/
-│   ├── background.dart         # Day/night sky + clouds/stars/moon
+│   ├── background.dart         # Day/night sky (themed) + clouds/stars/moon
 │   ├── ground.dart             # Scrolling ground
-│   ├── bird.dart               # Player bird (physics, drawing, collisions)
-│   ├── pipe_pair.dart          # Obstacle pipes + scoring trigger
+│   ├── bird.dart               # Player bird (physics, skins, mini, shield, collisions)
+│   ├── pipe_pair.dart          # Obstacle pipes (themed) + scoring trigger
+│   ├── coin.dart               # Collectible coins (magnet-aware)
+│   ├── power_up.dart           # 5 power-up types
+│   ├── effects.dart            # Particle bursts + floating text
 │   └── score_text.dart         # On-screen score display
 └── services/
-    ├── game_storage.dart       # Persistent high score + sound preference
-    └── audio_manager.dart      # Sound effect playback
+    ├── game_storage.dart       # Persistence: coins, skins, stats, achievements, mission
+    └── audio_manager.dart      # SFX + background music
 assets/
-└── audio/                      # flap / score / hit sound effects
+├── audio/                      # flap / score / hit / music
+└── icon/                       # app launcher icon source
 ```
 
 ## ⚙️ Tech stack

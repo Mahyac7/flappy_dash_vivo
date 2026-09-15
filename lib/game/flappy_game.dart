@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 
 import '../components/background.dart';
 import '../components/bird.dart';
+import '../components/coin.dart';
+import '../components/effects.dart';
 import '../components/ground.dart';
 import '../components/pipe_pair.dart';
 import '../components/power_up.dart';
@@ -15,41 +17,33 @@ import '../services/audio_manager.dart';
 import '../services/game_storage.dart';
 
 /// Possible states the game can be in.
-enum GameState { menu, playing, paused, gameOver }
+///
+/// [ready] = tap-to-start: the bird hovers, gravity is off until the first tap.
+enum GameState { menu, ready, playing, paused, gameOver }
 
 /// Core game class for Flappy Vappstore.
-///
-/// Handles gravity, spawning pipes, scoring, collisions, progressive
-/// difficulty, day/night transition, power-ups, sound and state changes.
 class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
   FlappyGame();
 
   // --- Tuning constants ---
-  /// Downward acceleration applied to the bird (pixels / second^2).
   static const double gravity = 1600;
-
-  /// Upward velocity applied when the player taps (pixels / second).
   static const double flapVelocity = -480;
-
-  /// Base horizontal speed at score 0 (pixels / second).
   static const double baseWorldSpeed = 160;
-
-  /// Maximum horizontal speed the game ramps up to.
   static const double maxWorldSpeed = 320;
-
-  /// Vertical gap between pipes at score 0.
   static const double basePipeGap = 230;
-
-  /// Smallest the gap is ever allowed to shrink to.
   static const double minPipeGap = 150;
-
-  /// Score at which difficulty reaches its hardest setting.
   static const double difficultyRampScore = 30;
 
   // Power-up tuning.
   static const double shieldDuration = 6.0;
   static const double slowMoDuration = 5.0;
   static const double slowMoFactor = 0.55;
+  static const double magnetDuration = 7.0;
+  static const double miniDuration = 7.0;
+  static const double doubleScoreDuration = 8.0;
+
+  // Combo tuning: consecutive pipes raise a multiplier.
+  static const int comboStep = 5; // every N pipes → +1 multiplier
 
   final Random _random = Random();
 
@@ -63,29 +57,42 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
   bool isNewHighScore = false;
   bool madeLeaderboard = false;
 
+  // Run-scoped counters.
+  int coinsThisRun = 0;
+  int pipesThisRun = 0;
+  int combo = 0;
+  int bestComboThisRun = 0;
+  double _flightSeconds = 0;
+  List<Achievement> newlyUnlocked = [];
+
   double _pipeTimer = 0;
   int _pipesSincePowerUp = 0;
 
-  /// Remaining slow-motion time in seconds (0 = normal speed).
+  // Power-up timers.
   double slowMoTime = 0;
-  bool get isSlowMo => slowMoTime > 0;
+  double magnetTime = 0;
+  double miniTime = 0;
+  double doubleScoreTime = 0;
 
-  /// Multiplier applied to horizontal movement (for slow-mo).
+  bool get isSlowMo => slowMoTime > 0;
+  bool get isMagnet => magnetTime > 0;
+  bool get isMini => miniTime > 0;
+  bool get isDoubleScore => doubleScoreTime > 0;
+
   double get timeScale => isSlowMo ? slowMoFactor : 1.0;
 
-  /// 0.0 (easy) .. 1.0 (hardest), derived from the current score.
+  /// Current combo multiplier (1x, 2x, 3x ...).
+  int get comboMultiplier => 1 + (combo ~/ comboStep);
+
   double get difficulty =>
       (score / difficultyRampScore).clamp(0.0, 1.0).toDouble();
 
-  /// Current world speed, scaled by difficulty and slow-mo.
   double get worldSpeed =>
       (baseWorldSpeed + (maxWorldSpeed - baseWorldSpeed) * difficulty) *
       timeScale;
 
-  /// Current pipe gap, shrinking with difficulty.
   double get pipeGap => basePipeGap - (basePipeGap - minPipeGap) * difficulty;
 
-  /// Seconds between pipe spawns, shortening slightly with difficulty.
   double get pipeInterval => (1.7 - 0.5 * difficulty) / timeScale;
 
   @override
@@ -94,7 +101,6 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
   @override
   FutureOr<void> onLoad() async {
     await super.onLoad();
-
     highScore = GameStorage.instance.highScore;
 
     background = Background();
@@ -108,45 +114,66 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
     add(_scoreText);
   }
 
-  /// Starts (or restarts) a game round.
+  void _clearRunComponents() {
+    children.whereType<PipePair>().toList().forEach(remove);
+    children.whereType<PowerUp>().toList().forEach(remove);
+    children.whereType<Coin>().toList().forEach(remove);
+  }
+
+  void _resetTimers() {
+    slowMoTime = 0;
+    magnetTime = 0;
+    miniTime = 0;
+    doubleScoreTime = 0;
+  }
+
+  /// Enters the "ready" (tap-to-start) state where the bird hovers.
   void startGame() {
     overlays.remove('menu');
     overlays.remove('gameOver');
-    overlays.remove('hud');
-
-    // Remove leftover pipes and power-ups from the previous round.
-    children.whereType<PipePair>().toList().forEach(remove);
-    children.whereType<PowerUp>().toList().forEach(remove);
+    _clearRunComponents();
 
     score = 0;
+    coinsThisRun = 0;
+    pipesThisRun = 0;
+    combo = 0;
+    bestComboThisRun = 0;
+    _flightSeconds = 0;
     _pipeTimer = 0;
     _pipesSincePowerUp = 0;
-    slowMoTime = 0;
     isNewHighScore = false;
     madeLeaderboard = false;
+    newlyUnlocked = [];
+    _resetTimers();
     _scoreText.updateScore(0);
     bird.reset();
-    state = GameState.playing;
-    overlays.add('hud');
 
+    state = GameState.ready;
+    overlays.add('hud');
+    overlays.add('ready');
     AudioManager.instance.startMusic();
   }
 
-  /// Returns to the main menu.
+  void _beginPlaying() {
+    overlays.remove('ready');
+    state = GameState.playing;
+    bird.flap();
+    AudioManager.instance.playFlap();
+  }
+
   void goHome() {
-    children.whereType<PipePair>().toList().forEach(remove);
-    children.whereType<PowerUp>().toList().forEach(remove);
+    _clearRunComponents();
     overlays.remove('paused');
     overlays.remove('gameOver');
     overlays.remove('hud');
-    slowMoTime = 0;
+    overlays.remove('ready');
+    _resetTimers();
     state = GameState.menu;
     bird.reset();
     AudioManager.instance.pauseMusic();
     overlays.add('menu');
   }
 
-  /// Pauses gameplay.
   void pauseGame() {
     if (state != GameState.playing) return;
     state = GameState.paused;
@@ -154,7 +181,6 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
     overlays.add('paused');
   }
 
-  /// Resumes from pause.
   void resumeGame() {
     if (state != GameState.paused) return;
     overlays.remove('paused');
@@ -162,34 +188,87 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
     AudioManager.instance.startMusic();
   }
 
-  /// Called by a pipe when the bird successfully passes it.
+  /// Called by a pipe when the bird passes it.
   void increaseScore() {
-    score++;
+    pipesThisRun++;
+    combo++;
+    if (combo > bestComboThisRun) bestComboThisRun = combo;
+
+    final int gained = comboMultiplier * (isDoubleScore ? 2 : 1);
+    score += gained;
     _scoreText.updateScore(score);
     AudioManager.instance.playScore();
-  }
 
-  /// Called when the shield absorbs a hit instead of the bird dying.
-  void onShieldConsumed() {
-    HapticFeedback.lightImpact();
-    AudioManager.instance.playHit();
-  }
-
-  /// Applies a collected power-up.
-  void collectPowerUp(PowerUpType type) {
-    AudioManager.instance.playPowerUp();
-    HapticFeedback.selectionClick();
-    switch (type) {
-      case PowerUpType.shield:
-        bird.grantShield(shieldDuration);
-        break;
-      case PowerUpType.slowMo:
-        slowMoTime = max(slowMoTime, slowMoDuration);
-        break;
+    // Show combo popup on milestone multipliers.
+    if (combo > 0 && combo % comboStep == 0) {
+      add(FloatingText(
+        text: 'COMBO x$comboMultiplier',
+        position: bird.position.clone()..y -= 40,
+        color: const Color(0xFFFFD54F),
+        fontSize: 24,
+      ));
+      HapticFeedback.selectionClick();
     }
   }
 
-  /// Ends the current round and shows the game-over overlay.
+  void onShieldConsumed() {
+    _haptic(() => HapticFeedback.lightImpact());
+    AudioManager.instance.playHit();
+    combo = 0; // breaking through a pipe resets the streak
+    add(ParticleBurst(
+      position: bird.position.clone(),
+      color: const Color(0xFF29B6F6),
+      count: 14,
+    ));
+  }
+
+  void collectCoin(Vector2 at) {
+    coinsThisRun++;
+    AudioManager.instance.playScore();
+    add(ParticleBurst(
+      position: at,
+      color: const Color(0xFFFFC107),
+      count: 8,
+      speed: 110,
+      life: 0.4,
+    ));
+  }
+
+  void collectPowerUp(PowerUpType type) {
+    AudioManager.instance.playPowerUp();
+    _haptic(() => HapticFeedback.selectionClick());
+
+    String label;
+    switch (type) {
+      case PowerUpType.shield:
+        bird.grantShield(shieldDuration);
+        label = 'SHIELD';
+        break;
+      case PowerUpType.slowMo:
+        slowMoTime = max(slowMoTime, slowMoDuration);
+        label = 'SLOW-MO';
+        break;
+      case PowerUpType.magnet:
+        magnetTime = max(magnetTime, magnetDuration);
+        label = 'MAGNET';
+        break;
+      case PowerUpType.mini:
+        miniTime = max(miniTime, miniDuration);
+        label = 'MINI';
+        break;
+      case PowerUpType.doubleScore:
+        doubleScoreTime = max(doubleScoreTime, doubleScoreDuration);
+        label = 'DOUBLE!';
+        break;
+    }
+    add(FloatingText(
+      text: label,
+      position: bird.position.clone()..y -= 44,
+      color: PowerUp.colorForPublic(type),
+      fontSize: 22,
+    ));
+  }
+
   Future<void> gameOver() async {
     if (state == GameState.gameOver) return;
     state = GameState.gameOver;
@@ -197,15 +276,39 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
 
     AudioManager.instance.playHit();
     AudioManager.instance.pauseMusic();
-    HapticFeedback.mediumImpact();
+    _haptic(() => HapticFeedback.mediumImpact());
+
+    add(ParticleBurst(
+      position: bird.position.clone(),
+      color: const Color(0xFFFF7043),
+      count: 18,
+      speed: 200,
+      life: 0.6,
+      particleSize: 5,
+    ));
+
+    // Persist coins earned this run.
+    await GameStorage.instance.addCoins(coinsThisRun);
 
     isNewHighScore = await GameStorage.instance.maybeSaveHighScore(score);
     madeLeaderboard = await GameStorage.instance.addScore(score);
     highScore = GameStorage.instance.highScore;
 
+    newlyUnlocked = await GameStorage.instance.recordGameResult(
+      score: score,
+      pipes: pipesThisRun,
+      coinsCollected: coinsThisRun,
+      bestCombo: bestComboThisRun,
+      flightSeconds: _flightSeconds,
+    );
+
     overlays.remove('hud');
     overlays.remove('paused');
     overlays.add('gameOver');
+  }
+
+  void _haptic(void Function() fn) {
+    if (GameStorage.instance.vibrationEnabled) fn();
   }
 
   @override
@@ -213,9 +316,11 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
     super.update(dt);
     if (state != GameState.playing) return;
 
-    if (slowMoTime > 0) {
-      slowMoTime -= dt;
-    }
+    _flightSeconds += dt;
+    if (slowMoTime > 0) slowMoTime -= dt;
+    if (magnetTime > 0) magnetTime -= dt;
+    if (miniTime > 0) miniTime -= dt;
+    if (doubleScoreTime > 0) doubleScoreTime -= dt;
 
     _pipeTimer += dt;
     if (_pipeTimer >= pipeInterval) {
@@ -225,7 +330,6 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
   }
 
   void _spawnPipe() {
-    // Keep the gap comfortably away from the very top and the ground.
     const double topMargin = 80;
     final double groundTop = size.y - Ground.groundHeight;
     final double gap = pipeGap;
@@ -236,15 +340,24 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
 
     add(PipePair(gapCenter: gapCenter, gap: gap));
 
-    // Occasionally spawn a power-up in a gap (roughly every 4-6 pipes).
+    // Spawn a small arc of coins in the gap most of the time.
+    if (_random.nextDouble() < 0.7) {
+      final int n = 1 + _random.nextInt(3);
+      for (int i = 0; i < n; i++) {
+        add(Coin(
+          position: Vector2(size.x + 150 + i * 34.0, gapCenter),
+        ));
+      }
+    }
+
+    // Occasionally spawn a power-up (random among all 5 types).
     _pipesSincePowerUp++;
-    if (_pipesSincePowerUp >= 4 && _random.nextDouble() < 0.5) {
+    if (_pipesSincePowerUp >= 4 && _random.nextDouble() < 0.45) {
       _pipesSincePowerUp = 0;
-      final type =
-          _random.nextBool() ? PowerUpType.shield : PowerUpType.slowMo;
+      final type = PowerUpType.values[_random.nextInt(PowerUpType.values.length)];
       add(PowerUp(
         type: type,
-        position: Vector2(size.x + 160, gapCenter),
+        position: Vector2(size.x + 220, gapCenter),
       ));
     }
   }
@@ -252,6 +365,9 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
   @override
   void onTap() {
     switch (state) {
+      case GameState.ready:
+        _beginPlaying();
+        break;
       case GameState.playing:
         bird.flap();
         AudioManager.instance.playFlap();
@@ -259,7 +375,6 @@ class FlappyGame extends FlameGame with TapDetector, HasCollisionDetection {
       case GameState.menu:
       case GameState.paused:
       case GameState.gameOver:
-        // Overlays / buttons handle these states.
         break;
     }
   }
