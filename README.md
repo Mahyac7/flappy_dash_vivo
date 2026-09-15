@@ -18,12 +18,24 @@ and try to beat your high score!
 ## ✨ Features
 
 - 🔊 **Sound effects** for flapping, scoring and crashing (with an on/off toggle).
+- 🎵 **Background music** (looping chiptune) with its own on/off toggle.
+- 🎨 **Bird skins** — pick from 6 colour schemes; your choice is saved.
+- ⚡ **Power-ups**:
+  - 🛡️ **Shield** — absorbs one pipe hit.
+  - ⏱️ **Slow-mo** — briefly slows the world down so you can thread tight gaps.
 - 📈 **Progressive difficulty** — the game gets faster and the gaps get narrower as your score climbs.
-- 💾 **Persistent high score** — your best score is saved and survives app restarts.
+- 💾 **Persistent high score** — saved and survives app restarts.
+- 🏆 **Local leaderboard** — your top 5 scores with your player name.
+- 📤 **Share your score** to any app via the system share sheet.
+- 🏠 **Home button** on the pause and game-over screens.
 - ⏸️ **Pause / resume** button during play.
 - 🌗 **Day → night** background that darkens as difficulty rises (with stars and a moon).
 - 🏅 **Medals** on the game-over screen: Bronze, Silver, Gold, Platinum.
-- 📳 **Haptic feedback** (vibration) on crash.
+- 📳 **Haptic feedback** (vibration) on crash and power-up pickup.
+
+> 🔑 **Signed releases:** the APK is signed with a persistent release key when the
+> repo's signing secrets are configured, so updates install over previous
+> versions without uninstalling.
 
 ## 📱 Download & install the APK (no tools needed)
 

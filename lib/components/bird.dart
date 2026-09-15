@@ -1,21 +1,33 @@
+import 'dart:math' as math;
+
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
+import '../game/bird_skins.dart';
 import '../game/flappy_game.dart';
+import '../services/game_storage.dart';
 import 'ground.dart';
+import 'pipe_pair.dart';
+import 'power_up.dart';
 
 /// The player-controlled bird.
 ///
 /// Falls under gravity and gets an upward impulse on each flap. Drawn as a
-/// simple round body with an eye, a beak and a wing so no image assets are
-/// required.
+/// round body with an eye, a beak and a wing so no image assets are required.
+/// Colours come from the player's selected [BirdSkin].
 class Bird extends PositionComponent
     with HasGameReference<FlappyGame>, CollisionCallbacks {
   Bird() : super(size: Vector2(46, 34), anchor: Anchor.center);
 
   double _velocity = 0;
   bool _alive = true;
+
+  /// Remaining shield time in seconds (0 = no shield).
+  double shieldTime = 0;
+  double _shieldPulse = 0;
+
+  bool get hasShield => shieldTime > 0;
 
   static const double _radius = 17;
 
@@ -35,6 +47,7 @@ class Bird extends PositionComponent
   void reset() {
     _alive = true;
     _velocity = 0;
+    shieldTime = 0;
     angle = 0;
     position = Vector2(game.size.x * 0.28, game.size.y * 0.42);
   }
@@ -50,10 +63,20 @@ class Bird extends PositionComponent
     _alive = false;
   }
 
+  /// Grants a temporary shield that absorbs one obstacle hit.
+  void grantShield(double seconds) {
+    shieldTime = math.max(shieldTime, seconds);
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     if (game.state != GameState.playing && _alive) return;
+
+    if (shieldTime > 0) {
+      shieldTime -= dt;
+      _shieldPulse += dt * 6;
+    }
 
     _velocity += FlappyGame.gravity * dt;
     position.y += _velocity * dt;
@@ -67,7 +90,7 @@ class Bird extends PositionComponent
       _velocity = 0;
     }
 
-    // Hitting the ground ends the game.
+    // Hitting the ground always ends the game (shield doesn't save you here).
     final double groundTop = game.size.y - Ground.groundHeight;
     if (position.y + _radius >= groundTop) {
       position.y = groundTop - _radius;
@@ -81,44 +104,68 @@ class Bird extends PositionComponent
     PositionComponent other,
   ) {
     super.onCollisionStart(intersectionPoints, other);
-    game.gameOver();
+
+    // Power-up pickup is handled by the power-up itself; ignore here.
+    if (other is PowerUp || other.parent is PowerUp) return;
+
+    // Colliding with a pipe: the pipe hitbox lives inside a _Pipe which lives
+    // inside a PipePair. Walk up to see if this is part of a pipe.
+    final bool isPipe = _isDescendantOfPipePair(other);
+    if (isPipe) {
+      if (hasShield) {
+        shieldTime = 0;
+        game.onShieldConsumed();
+        return;
+      }
+      game.gameOver();
+    }
+  }
+
+  bool _isDescendantOfPipePair(Component c) {
+    Component? current = c;
+    while (current != null) {
+      if (current is PipePair) return true;
+      current = current.parent;
+    }
+    return false;
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
     final Offset center = Offset(size.x / 2, size.y / 2);
+    final skin = BirdSkin.byIndex(GameStorage.instance.birdSkin);
 
     // Body.
-    final bodyPaint = Paint()..color = const Color(0xFFFFD54F);
-    canvas.drawCircle(center, _radius, bodyPaint);
+    canvas.drawCircle(center, _radius, Paint()..color = skin.body);
 
     // Body outline.
-    final outline = Paint()
-      ..color = const Color(0xFF8D6E00)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, _radius, outline);
+    canvas.drawCircle(
+      center,
+      _radius,
+      Paint()
+        ..color = skin.outline
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
 
     // Wing.
-    final wingPaint = Paint()..color = const Color(0xFFFFF3C4);
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(center.dx - 4, center.dy + 3),
         width: 20,
         height: 12,
       ),
-      wingPaint,
+      Paint()..color = skin.bodyLight,
     );
 
     // Beak.
-    final beakPaint = Paint()..color = const Color(0xFFFF7043);
     final beak = Path()
       ..moveTo(center.dx + _radius - 2, center.dy - 4)
       ..lineTo(center.dx + _radius + 9, center.dy)
       ..lineTo(center.dx + _radius - 2, center.dy + 4)
       ..close();
-    canvas.drawPath(beak, beakPaint);
+    canvas.drawPath(beak, Paint()..color = skin.beak);
 
     // Eye.
     canvas.drawCircle(
@@ -131,6 +178,18 @@ class Bird extends PositionComponent
       2.4,
       Paint()..color = Colors.black,
     );
+
+    // Shield bubble.
+    if (hasShield) {
+      final double alpha = 0.35 + 0.25 * (0.5 + 0.5 * math.sin(_shieldPulse));
+      canvas.drawCircle(
+        center,
+        _radius + 7,
+        Paint()
+          ..color = const Color(0xFF29B6F6).withOpacity(alpha)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+    }
   }
 }
-
