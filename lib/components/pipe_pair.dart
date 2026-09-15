@@ -10,10 +10,13 @@ import 'ground.dart';
 /// Moves left across the screen, awards a point once the bird passes it and
 /// removes itself once fully off-screen.
 class PipePair extends PositionComponent with HasGameReference<FlappyGame> {
-  PipePair({required this.gapCenter});
+  PipePair({required this.gapCenter, required this.gap});
 
   /// Vertical center of the gap, in world coordinates.
   final double gapCenter;
+
+  /// Height of the gap for this pair (varies with difficulty).
+  final double gap;
 
   static const double pipeWidth = 70;
 
@@ -25,7 +28,6 @@ class PipePair extends PositionComponent with HasGameReference<FlappyGame> {
     height = game.size.y;
     position = Vector2(game.size.x + pipeWidth, 0);
 
-    const double gap = FlappyGame.pipeGap;
     final double groundTop = game.size.y - Ground.groundHeight;
 
     final double topHeight = gapCenter - gap / 2;
@@ -51,7 +53,7 @@ class PipePair extends PositionComponent with HasGameReference<FlappyGame> {
     super.update(dt);
     if (game.state != GameState.playing) return;
 
-    position.x -= FlappyGame.worldSpeed * dt;
+    position.x -= game.worldSpeed * dt;
 
     // Score once the bird's x passes the right edge of the pipe.
     if (!_scored && position.x + pipeWidth < game.bird.position.x) {

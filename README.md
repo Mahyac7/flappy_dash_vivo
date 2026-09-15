@@ -1,4 +1,4 @@
-# 🐦 Flappy Dash
+# 🐦 Flappy Vappstore
 
 A Flappy Bird–style tap game built with **Flutter** and the **Flame** game engine.
 Tap the screen to make the bird flap, fly through the gaps between the pipes,
@@ -14,7 +14,16 @@ and try to beat your high score!
 - Gravity constantly pulls the bird down.
 - Fly through the gap between each pair of pipes to score a point.
 - Touching a pipe or the ground ends the game.
-- Your best score is remembered during the session.
+
+## ✨ Features
+
+- 🔊 **Sound effects** for flapping, scoring and crashing (with an on/off toggle).
+- 📈 **Progressive difficulty** — the game gets faster and the gaps get narrower as your score climbs.
+- 💾 **Persistent high score** — your best score is saved and survives app restarts.
+- ⏸️ **Pause / resume** button during play.
+- 🌗 **Day → night** background that darkens as difficulty rises (with stars and a moon).
+- 🏅 **Medals** on the game-over screen: Bronze, Silver, Gold, Platinum.
+- 📳 **Haptic feedback** (vibration) on crash.
 
 ## 📱 Download & install the APK (no tools needed)
 
@@ -58,21 +67,28 @@ flutter run -d chrome
 
 ```
 lib/
-├── main.dart                  # App entry point + menu / game-over overlays
+├── main.dart                  # App entry point + all overlays (menu, HUD, pause, game over)
 ├── game/
-│   └── flappy_game.dart        # Core game loop, state, scoring, pipe spawning
-└── components/
-    ├── background.dart         # Sky gradient + clouds
-    ├── ground.dart             # Scrolling ground
-    ├── bird.dart               # Player bird (physics, drawing, collisions)
-    ├── pipe_pair.dart          # Obstacle pipes + scoring trigger
-    └── score_text.dart         # On-screen score display
+│   └── flappy_game.dart        # Core game loop, state, scoring, difficulty, medals
+├── components/
+│   ├── background.dart         # Day/night sky + clouds/stars/moon
+│   ├── ground.dart             # Scrolling ground
+│   ├── bird.dart               # Player bird (physics, drawing, collisions)
+│   ├── pipe_pair.dart          # Obstacle pipes + scoring trigger
+│   └── score_text.dart         # On-screen score display
+└── services/
+    ├── game_storage.dart       # Persistent high score + sound preference
+    └── audio_manager.dart      # Sound effect playback
+assets/
+└── audio/                      # flap / score / hit sound effects
 ```
 
 ## ⚙️ Tech stack
 
 - [Flutter](https://flutter.dev/) — UI toolkit
 - [Flame](https://flame-engine.org/) `1.18.0` — 2D game engine
+- [audioplayers](https://pub.dev/packages/audioplayers) — sound effects
+- [shared_preferences](https://pub.dev/packages/shared_preferences) — persistent high score
 - GitHub Actions — automatic APK builds
 
 ## 📄 License

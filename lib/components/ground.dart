@@ -30,7 +30,7 @@ class Ground extends PositionComponent with HasGameReference<FlappyGame> {
   void update(double dt) {
     super.update(dt);
     if (game.state == GameState.playing) {
-      _offset = (_offset + FlappyGame.worldSpeed * dt) % 24;
+      _offset = (_offset + game.worldSpeed * dt) % 24;
     }
   }
 
