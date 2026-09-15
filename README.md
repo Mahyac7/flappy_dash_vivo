@@ -118,8 +118,4 @@ assets/
 - [shared_preferences](https://pub.dev/packages/shared_preferences) — persistent high score
 - GitHub Actions — automatic APK builds
 
-## 📄 License
-
-Free to use and modify for learning and fun. 
-
 by Indonesia V-AppStore Team
