@@ -93,4 +93,6 @@ assets/
 
 ## 📄 License
 
-Free to use and modify for learning and fun.
+Free to use and modify for learning and fun. 
+
+Indonesia V-AppStore Team
